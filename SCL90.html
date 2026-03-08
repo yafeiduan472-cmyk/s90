@@ -11,18 +11,15 @@
         .app-wrapper { max-width: 480px; margin: 0 auto; background: #ffffff; min-height: 100vh; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
         .test-container { padding: 20px; }
         
-        /* 错误拦截 */
         .error-page { text-align: center; padding-top: 100px; }
         .error-icon { font-size: 60px; margin-bottom: 20px; }
 
-        /* 答题区样式 */
         .question-title { font-size: 20px; font-weight: 600; color: #1a1a1a; line-height: 1.5; margin-bottom: 30px; }
         .option-item { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; margin-bottom: 12px; border-radius: 14px; background: #f8f9fa; border: 2px solid transparent; cursor: pointer; transition: 0.2s; }
         .option-item.active { background: #eef5ff; border-color: #1989fa; }
         .radio-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ccc; }
         .option-item.active .radio-circle { border-color: #1989fa; background: #1989fa; box-shadow: inset 0 0 0 4px #eef5ff; }
 
-        /* 报告页高级样式 */
         .report-card { background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 20px; border: 1px solid #edf2f7; }
         .report-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #2d3748; display: flex; align-items: center; }
         .report-title::before { content: ''; width: 4px; height: 18px; background: #1989fa; margin-right: 10px; border-radius: 2px; }
@@ -33,7 +30,6 @@
         .factor-label { font-weight: 500; }
         .score-tag { font-weight: bold; }
         
-        /* 建议卡片颜色环境 */
         .advice-box { padding: 16px; border-radius: 12px; font-size: 14px; line-height: 1.6; }
         .advice-danger { background: #fff5f5; color: #c53030; border-left: 4px solid #fc8181; }
         .advice-warning { background: #fffaf0; color: #975a16; border-left: 4px solid #f6ad55; }
@@ -48,7 +44,7 @@
             <div v-if="!isValidLink" class="error-page">
                 <div class="error-icon">🔒</div>
                 <div class="error-title">链接验证失败</div>
-                <div class="error-desc">该链接已过期或参数错误。请通过小红书私信获取最新的专属测评链接。</div>
+                <div class="error-desc">链接已过期或参数错误，请私信客服获取最新链接。</div>
             </div>
 
             <div v-else class="test-container">
@@ -75,7 +71,7 @@
                 <div v-else>
                     <div class="summary-box">
                         <div style="font-size: 14px; opacity: 0.9;">测评结论汇总</div>
-                        <div style="font-size: 28px; font-weight: bold; margin: 10px 0;">{{ finalStatus.title }}</div>
+                        <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">{{ finalStatus.title }}</div>
                         <div style="font-size: 13px; opacity: 0.8; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
                             总分：{{ totalScore }} | 阳性项目数：{{ positiveCount }}
                         </div>
@@ -90,9 +86,6 @@
                             </div>
                             <van-progress :percentage="getScorePercent(score)" stroke-width="10" :color="getScoreColor(score)" :show-pivot="false"></van-progress>
                         </div>
-                        <div style="font-size: 12px; color: #a0aec0; margin-top: 15px; text-align: center;">
-                            注：得分越高代表该维度症状越明显
-                        </div>
                     </div>
 
                     <div class="report-card">
@@ -103,11 +96,11 @@
                         </div>
                         
                         <div v-if="hasMajorProblem" style="margin-top: 20px; font-size: 13px; color: #718096; background: #f7fafc; padding: 12px; border-radius: 8px;">
-                            <strong>温馨提示：</strong>由于您有部分因子得分处于高位，建议您将此报告截屏保存，咨询专业心理咨询师或前往医院精神心理科进行面诊。
+                            <strong>重要提示：</strong>得分较高维度提示您近期可能面临心理困境，建议咨询专业心理医生。
                         </div>
                     </div>
 
-                    <van-button type="primary" block round plain style="margin-top: 20px;" @click="refresh">重新测试</van-button>
+                    <van-button type="primary" block round plain @click="refresh">重新测试</van-button>
                     <div style="height: 40px;"></div>
                 </div>
             </div>
@@ -195,7 +188,7 @@
                 const factorMapping = {
                     "躯体化": [1, 4, 12, 27, 40, 42, 48, 49, 52, 53, 56, 58],
                     "强迫症状": [3, 9, 10, 28, 38, 45, 46, 51, 55, 65],
-                    "人际关系敏感": [6, 21, 34, 36, 37, 41, 61, 69, 73],
+                    "人际敏感": [6, 21, 34, 36, 37, 41, 61, 69, 73],
                     "抑郁": [5, 14, 15, 20, 22, 26, 29, 30, 31, 32, 54, 71, 79],
                     "焦虑": [2, 17, 23, 33, 39, 57, 72, 78, 80, 86],
                     "敌对": [11, 24, 63, 67, 74, 81],
@@ -205,7 +198,6 @@
                     "其他": [19, 44, 59, 60, 64, 66, 89]
                 };
 
-                // 计算结果逻辑
                 const factorResults = computed(() => {
                     let results = {};
                     for (let f in factorMapping) {
@@ -221,39 +213,38 @@
                 const progress = computed(() => Math.round((currentIndex.value / 90) * 100));
                 const currentQuestion = computed(() => questions[currentIndex.value]);
 
-                // 辅助函数：颜色与长度
                 const getScoreColor = (score) => {
-                    if (score >= 3) return '#ee0a24'; // 红色：严重
-                    if (score >= 2) return '#ff976a'; // 橘色：轻度
-                    return '#07c160'; // 绿色：正常
+                    if (score >= 3) return '#ee0a24';
+                    if (score >= 2) return '#ff976a';
+                    return '#07c160';
                 };
                 const getScorePercent = (score) => (score / 5) * 100;
 
-                // 【核心】根据分数判断状态并给出建议
                 const finalStatus = computed(() => {
                     const results = factorResults.value;
                     let highFactors = [];
                     for (let f in results) {
-                        if (results[f] >= 3) highFactors.append(f);
+                        // 修正点：JavaScript 数组用 push 而不是 append
+                        if (results[f] >= 3) highFactors.push(f); 
                     }
 
                     if (highFactors.length > 0 || totalScore.value > 160) {
                         return {
                             title: "提示风险：需重点关注",
                             class: "advice-danger",
-                            advice: `您的测评结果显示，在【${highFactors.join('、') || '总分'}】维度得分较高（≥3分）。这提示您当前可能正承受较为明显的心理压力或症状困扰。强烈建议您寻求专业心理咨询师的帮助，或前往正规医疗机构的精神心理科进行面诊评估。`
+                            advice: `您的测评结果显示，在【${highFactors.join('、') || '总分'}】维度得分较高（≥3分）。这提示您当前承受着较为明显的心理压力。强烈建议您寻求专业心理咨询师的帮助，或前往正规医疗机构的精神心理科面诊。`
                         };
                     } else if (positiveCount.value > 43) {
                         return {
                             title: "轻度困扰：建议调节",
                             class: "advice-warning",
-                            advice: "您的阳性项目数较多，说明近期心理状态有些波动。建议您近期多关注情绪变化，尝试运动、冥想或与信任的朋友倾诉。如不适感持续，建议预约一次心理咨询进行疏解。"
+                            advice: "您的阳性项目数较多，说明近期情绪有些波动。建议尝试运动、冥想或向朋友倾诉。如不适感持续，建议预约一次咨询进行疏解。"
                         };
                     } else {
                         return {
                             title: "状态良好：继续保持",
                             class: "advice-success",
-                            advice: "恭喜！您的各项指标均在正常范围内。说明您目前的心理适应能力较强，生活状态平稳。请继续保持良好的生活作息和积极的心态。"
+                            advice: "恭喜！您的各项指标均在正常范围内。说明您目前的心理调节能力较好，请继续保持积极的心态。"
                         };
                     }
                 });
