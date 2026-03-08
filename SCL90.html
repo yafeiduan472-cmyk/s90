@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SCL-90 专业心理测评</title>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/vant/4.8.0/index.min.css" />
+    <style>
+        body { background-color: #f0f4f8; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; margin: 0; padding: 0; }
+        [v-cloak] { display: none !important; }
+        .app-wrapper { max-width: 480px; margin: 20px auto; background: #ffffff; min-height: 90vh; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border-radius: 20px; overflow: hidden; position: relative; }
+        .test-container { padding: 24px 20px; }
+        
+        /* 错误拦截页面样式 */
+        .error-page { text-align: center; padding-top: 100px; }
+        .error-icon { font-size: 60px; color: #ee0a24; margin-bottom: 20px; }
+        .error-title { font-size: 20px; color: #323233; font-weight: bold; margin-bottom: 10px; }
+        .error-desc { font-size: 14px; color: #969799; line-height: 1.5; padding: 0 20px; }
+
+        /* 答题卡样式 */
+        .question-title { font-size: 19px; line-height: 1.6; color: #1a1a1a; font-weight: 600; margin-bottom: 24px; }
+        .option-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; margin-bottom: 12px; border-radius: 12px; background: #f8f9fa; border: 2px solid transparent; cursor: pointer; transition: all 0.2s ease; }
+        .option-item.active { background: #eef5ff; border-color: #1989fa; }
+        .option-text { font-size: 16px; color: #333; }
+        .radio-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ccc; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
+        .option-item.active .radio-circle { border-color: #1989fa; }
+        .option-item.active .radio-circle::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #1989fa; }
+
+        /* 报告页样式 */
+        .report-header { text-align: center; margin-bottom: 20px; }
+        .score-box { display: flex; justify-content: space-between; background: #f8f9fa; padding: 15px 20px; border-radius: 12px; margin-bottom: 20px; }
+        .score-item { text-align: center; }
+        .score-num { font-size: 24px; font-weight: bold; color: #1989fa; }
+        .score-label { font-size: 12px; color: #666; margin-top: 4px; }
+        .factor-list { border: 1px solid #ebedf0; border-radius: 12px; overflow: hidden; }
+        .factor-item { display: flex; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #ebedf0; font-size: 15px; }
+        .warning-text { color: #ee0a24; font-weight: bold; }
+        .attention-text { color: #ff976a; font-weight: bold; }
+        .normal-text { color: #07c160; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-wrapper">
+            <van-nav-bar title="SCL-90 心理健康测评" :border="false" style="background: #f0f4f8;"></van-nav-bar>
+            
+            <div v-if="!isValidLink" class="error-page">
+                <div class="error-icon">⚠️</div>
+                <div class="error-title">链接已失效或不合法</div>
+                <div class="error-desc">该专属测评链接可能已经过期<br>请重新联系小红书客服获取最新链接</div>
+            </div>
+
+            <div v-else class="test-container">
+                <div v-if="!isFinished">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 14px; color: #969799; font-weight: bold;">进度</span>
+                        <span style="font-size: 14px; color: #1989fa; font-weight: bold;">{{ currentIndex + 1 }} / 90</span>
+                    </div>
+                    <van-progress :percentage="progress" stroke-width="8" color="linear-gradient(to right, #69c0ff, #1989fa)" style="margin-bottom: 30px;"></van-progress>
+
+                    <div class="question-title">{{ currentQuestion.id }}. {{ currentQuestion.text }}</div>
+                    <div class="options-container">
+                        <div class="option-item" v-for="(opt, idx) in options" :key="idx" :class="{ 'active': currentAnswer === opt.value }" @click="selectOption(opt.value)">
+                            <span class="option-text">{{ opt.label }}</span>
+                            <div class="radio-circle"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else>
+                    <div class="report-header">
+                        <h2 style="margin: 0; color: #323233;">测评结果报告</h2>
+                        <p style="font-size: 13px; color: #969799; margin-top: 8px;">报告仅供参考，不作为医学诊断依据</p>
+                    </div>
+
+                    <div class="score-box">
+                        <div class="score-item">
+                            <div class="score-num" :style="{color: totalScore > 160 ? '#ee0a24' : '#1989fa'}">{{ totalScore }}</div>
+                            <div class="score-label">总分 (>160需注意)</div>
+                        </div>
+                        <div class="score-item" style="border-left: 1px solid #e8e8e8; padding-left: 20px;">
+                            <div class="score-num" :style="{color: positiveCount > 43 ? '#ee0a24' : '#1989fa'}">{{ positiveCount }}</div>
+                            <div class="score-label">阳性项目 (>43需注意)</div>
+                        </div>
+                    </div>
+
+                    <van-notice-bar wrapable :scrollable="false" text="【指引】维度得分：1-1.99为正常；2-2.99为轻度(橘色)；≥3分为中重度(红色)，需重点关注。" style="margin-bottom: 20px; border-radius: 8px; background: #fffbe8; color: #ed6a0c;"></van-notice-bar>
+                    
+                    <div class="factor-list">
+                        <div style="padding: 14px 16px; font-weight: bold; background: #f8f9fa; border-bottom: 1px solid #ebedf0; font-size: 15px;">10项维度因子分析</div>
+                        <div v-for="(score, name) in factorResults" :key="name" class="factor-item">
+                            <span style="color: #323233;">{{ name }}</span>
+                            <span :class="score >= 3 ? 'warning-text' : (score >= 2 ? 'attention-text' : 'normal-text')">{{ score }} 分</span>
+                        </div>
+                    </div>
+                    <van-button type="primary" block round style="margin-top: 30px; height: 48px; font-size: 16px;" @click="refresh">重新测试</van-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.3.4/vue.global.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/vant/4.8.0/vant.min.js"></script>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // ================== 【时效链接校验核心】 ==================
+                const isValidLink = ref(false); // 默认拦截
+                const SECRET_SALT = "scl90_pro"; // 这个是咱们的防伪暗号
+
+                onMounted(() => {
+                    // 获取网址里 ?key= 后面的那一串密码
+                    const params = new URLSearchParams(window.location.search);
+                    const key = params.get('key');
+
+                    if (key) {
+                        try {
+                            // 解密密码
+                            const decoded = atob(key); 
+                            const parts = decoded.split('||');
+                            
+                            // 检查暗号是否正确，且时间是否过期
+                            if (parts.length === 2 && parts[1] === SECRET_SALT) {
+                                const expireTime = parseInt(parts[0]);
+                                const currentTime = Date.now(); // 当前系统时间(毫秒)
+                                
+                                if (currentTime < expireTime) {
+                                    isValidLink.value = true; // 放行！
+                                }
+                            }
+                        } catch (e) {
+                            console.log("密钥解析失败");
+                        }
+                    }
+                });
+                // =======================================================
+
+                const currentIndex = ref(0);
+                const userAnswers = ref([]);
+                const isFinished = ref(false);
+                const currentAnswer = ref(null);
+
+                const questions = [
+                    { id: 1, text: "头痛" }, { id: 2, text: "神经过敏，心中不踏实" }, { id: 3, text: "头脑中有不必要的想法或字句盘旋" },
+                    { id: 4, text: "头晕或晕倒" }, { id: 5, text: "对异性的兴趣减退" }, { id: 6, text: "对旁人责备求全" },
+                    { id: 7, text: "感到别人能控制您的思想" }, { id: 8, text: "责怪别人给您制造麻烦" }, { id: 9, text: "忘记性大" },
+                    { id: 10, text: "担心自己的衣饰整齐及仪态的端正" }, { id: 11, text: "容易烦恼和激动" }, { id: 12, text: "胸痛" },
+                    { id: 13, text: "害怕空旷的场所或街道" }, { id: 14, text: "感到自己的精力下降，活动减慢" }, { id: 15, text: "想结束自己的生命" },
+                    { id: 16, text: "听到旁人听不到的声音" }, { id: 17, text: "发抖" }, { id: 18, text: "感到大多数人都不可信任" },
+                    { id: 19, text: "胃口不好" }, { id: 20, text: "容易哭泣" }, { id: 21, text: "同异性相处时感到害羞不自然" },
+                    { id: 22, text: "感到受骗、中了圈套或有人想抓住您" }, { id: 23, text: "无缘无故地突然感到害怕" }, { id: 24, text: "自己不能控制地大发脾气" },
+                    { id: 25, text: "怕单独出门" }, { id: 26, text: "经常责怪自己" }, { id: 27, text: "感到下腰痛" },
+                    { id: 28, text: "感到难以完成任务" }, { id: 29, text: "感到孤独" }, { id: 30, text: "感到苦闷" },
+                    { id: 31, text: "过分担忧" }, { id: 32, text: "对事物不感兴趣" }, { id: 33, text: "感到害怕" },
+                    { id: 34, text: "您的感情容易受到伤害" }, { id: 35, text: "旁人能知道您的私下想法" }, { id: 36, text: "感到别人不理解您、不同情您" },
+                    { id: 37, text: "感到人们对您不友好，不喜欢您" }, { id: 38, text: "做事必须做得很慢以保证做得正确" }, { id: 39, text: "心跳得很厉害" },
+                    { id: 40, text: "恶心或胃部不舒服" }, { id: 41, text: "感到比不上他人" }, { id: 42, text: "肌肉酸痛" },
+                    { id: 43, text: "感到有人在监视您、谈论您" }, { id: 44, text: "难以入睡" }, { id: 45, text: "做事必须反复检查" },
+                    { id: 46, text: "难以作出决定" }, { id: 47, text: "怕乘电车、公共汽车、地铁或火车" }, { id: 48, text: "呼吸有困难" },
+                    { id: 49, text: "一阵阵发冷或发热" }, { id: 50, text: "因为感到害怕而避开某些东西、场合或活动" }, { id: 51, text: "脑子变空了" },
+                    { id: 52, text: "身体发麻或刺痛" }, { id: 53, text: "喉咙有梗塞感" }, { id: 54, text: "感到前途没有希望" },
+                    { id: 55, text: "不能集中注意" }, { id: 56, text: "感到身体的某一部分软弱无力" }, { id: 57, text: "感到紧张或容易紧张" },
+                    { id: 58, text: "感到手或脚发重" }, { id: 59, text: "想到死亡的事" }, { id: 60, text: "吃得太多" },
+                    { id: 61, text: "当别人看着您或谈论您时感到不自在" }, { id: 62, text: "有一些不属于您自己的想法" }, { id: 63, text: "有想打人或伤害他人的冲动" },
+                    { id: 64, text: "醒得太早" }, { id: 65, text: "必须反复洗手、点数目或触摸某些东西" }, { id: 66, text: "睡得不稳不深" },
+                    { id: 67, text: "有想摔坏或破坏东西的冲动" }, { id: 68, text: "有一些别人没有的想法或念头" }, { id: 69, text: "感到对别人神经过敏" },
+                    { id: 70, text: "在商店或电影院等人多的地方感到不自在" }, { id: 71, text: "感到任何事情都很困难" }, { id: 72, text: "一阵阵恐惧或惊恐" },
+                    { id: 73, text: "感到在公共场合吃东西很不舒服" }, { id: 74, text: "经常与人争论" }, { id: 75, text: "单独一人时神经很紧张" },
+                    { id: 76, text: "别人对您的成绩没有作出恰当的评价" }, { id: 77, text: "即使和别人在一起也感到孤单" }, { id: 78, text: "感到坐立不宁、心神不定" },
+                    { id: 79, text: "感到自己没有什么价值" }, { id: 80, text: "感到熟悉的东西变成陌生或不象是真的" }, { id: 81, text: "大叫或摔东西" },
+                    { id: 82, text: "害怕会在公共场合晕倒" }, { id: 83, text: "感到别人想占您的便宜" }, { id: 84, text: "为一些有关“性”的想法而很苦恼" },
+                    { id: 85, text: "您认为应该因为自己的过错而受到惩罚" }, { id: 86, text: "感到要赶快把事情做完" }, { id: 87, text: "感到自己的身体有严重问题" },
+                    { id: 88, text: "从未感到和其他人很亲近" }, { id: 89, text: "感到有罪" }, { id: 90, text: "感到自己的脑子有毛病" }
+                ];
+                const options = [
+                    { label: "从无", value: 1 }, { label: "很轻", value: 2 }, { label: "中度", value: 3 },
+                    { label: "偏重", value: 4 }, { label: "严重", value: 5 }
+                ];
+
+                const progress = computed(() => Math.floor((currentIndex.value / questions.length) * 100));
+                const currentQuestion = computed(() => questions[currentIndex.value]);
+
+                const selectOption = (val) => {
+                    if (currentAnswer.value !== null) return;
+                    currentAnswer.value = val;
+                    userAnswers.value.push(val);
+                    setTimeout(() => {
+                        if (currentIndex.value < questions.length - 1) {
+                            currentIndex.value++;
+                            currentAnswer.value = null;
+                        } else {
+                            isFinished.value = true;
+                        }
+                    }, 300); 
+                };
+
+                const totalScore = computed(() => userAnswers.value.reduce((sum, score) => sum + score, 0));
+                const positiveCount = computed(() => userAnswers.value.filter(score => score >= 2).length);
+
+                const factorMapping = {
+                    "躯体化": [1, 4, 12, 27, 40, 42, 48, 49, 52, 53, 56, 58],
+                    "强迫症状": [3, 9, 10, 28, 38, 45, 46, 51, 55, 65],
+                    "人际关系敏感": [6, 21, 34, 36, 37, 41, 61, 69, 73],
+                    "抑郁": [5, 14, 15, 20, 22, 26, 29, 30, 31, 32, 54, 71, 79],
+                    "焦虑": [2, 17, 23, 33, 39, 57, 72, 78, 80, 86],
+                    "敌对": [11, 24, 63, 67, 74, 81],
+                    "恐怖": [13, 25, 47, 50, 70, 75, 82],
+                    "偏执": [8, 18, 43, 68, 76, 83],
+                    "精神病性": [7, 16, 35, 62, 77, 84, 85, 87, 88, 90],
+                    "其他 (睡眠与饮食)": [19, 44, 59, 60, 64, 66, 89]
+                };
+
+                const factorResults = computed(() => {
+                    let results = {};
+                    for (let f in factorMapping) {
+                        let sum = 0;
+                        factorMapping[f].forEach(idx => { sum += (userAnswers.value[idx - 1] || 0); });
+                        results[f] = (sum / factorMapping[f].length).toFixed(2);
+                    }
+                    return results;
+                });
+
+                const refresh = () => {
+                    currentIndex.value = 0;
+                    userAnswers.value = [];
+                    currentAnswer.value = null;
+                    isFinished.value = false;
+                };
+
+                return { 
+                    isValidLink, // 决定是否拦截
+                    currentIndex, questions, options, progress, currentQuestion, currentAnswer, selectOption, 
+                    isFinished, factorResults, totalScore, positiveCount, refresh 
+                };
+            }
+        }).use(vant).mount('#app');
+    </script>
+</body>
+</html>
