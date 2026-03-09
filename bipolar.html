@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>双相情感障碍 (Bipolar) 深度测评报告</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.net/vant/4.8.0/index.min.css" />
+    <style>
+        body { background-color: #f4f5f7; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif; margin: 0; padding: 0; }
+        [v-cloak] { display: none !important; }
+        .app-wrapper { max-width: 480px; margin: 0 auto; background: #f4f5f7; min-height: 100vh; position: relative; padding-bottom: 40px;}
+        
+        .error-page { text-align: center; padding-top: 100px; }
+        .error-icon { font-size: 60px; color: #ee0a24; margin-bottom: 20px; }
+        
+        /* 答题区样式 */
+        .test-container { padding: 20px; background: #fff; border-radius: 0 0 20px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .test-desc { font-size: 13px; color: #666; background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 20px; line-height: 1.5; }
+        .question-title { font-size: 19px; line-height: 1.6; color: #1a1a1a; font-weight: 600; margin-bottom: 24px; }
+        .option-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; margin-bottom: 12px; border-radius: 12px; background: #f8f9fa; border: 2px solid transparent; cursor: pointer; transition: all 0.2s ease; }
+        .option-item.active { background: #eef5ff; border-color: #1989fa; }
+        .option-text { font-size: 15px; color: #333; }
+        .radio-circle { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ccc; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
+        .option-item.active .radio-circle { border-color: #1989fa; }
+        .option-item.active .radio-circle::after { content: ''; width: 12px; height: 12px; border-radius: 50%; background: #1989fa; }
+
+        /* 报告页样式 - 采用更冷静治愈的蓝绿色调 */
+        .report-header-bg { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 40px 20px 30px; text-align: center; color: white; border-radius: 0 0 24px 24px; box-shadow: 0 10px 20px rgba(0, 242, 254, 0.2); }
+        .report-header-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.9; }
+        .report-header-title { font-size: 20px; font-weight: bold; margin-bottom: 8px; letter-spacing: 1px;}
+        .report-header-time { font-size: 13px; opacity: 0.8; }
+
+        .report-card { background: white; margin: -15px 15px 20px; border-radius: 16px; padding: 24px 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); position: relative; z-index: 2; }
+        .card-title { text-align: center; font-size: 18px; font-weight: bold; color: #333; margin-bottom: 20px; }
+        
+        /* 总体评估 */
+        .total-score-box { text-align: center; margin-bottom: 20px; }
+        .total-label { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .total-num { font-size: 48px; font-weight: bold; line-height: 1; }
+        .total-max { font-size: 13px; color: #999; margin-top: 5px; }
+        
+        .level-box { text-align: center; margin-top: 20px; margin-bottom: 20px; }
+        .level-label { font-size: 14px; color: #666; margin-bottom: 10px; }
+        .level-tag { display: inline-block; padding: 10px 35px; border-radius: 12px; font-size: 22px; font-weight: bold; color: white; }
+        .advice-subtitle { font-size: 15px; font-weight: bold; margin-top: 12px; }
+        
+        .advice-box { background: #fff5f5; border-radius: 12px; padding: 18px; font-size: 15px; color: #333; line-height: 1.6; text-align: justify; }
+
+        /* 附加说明卡片 */
+        .info-box { background: #f8f9fa; border-radius: 12px; padding: 16px; margin-top: 20px; }
+        .info-title { font-size: 15px; font-weight: bold; color: #333; margin-bottom: 8px; }
+        .info-text { font-size: 13px; color: #666; line-height: 1.6; }
+
+        /* 颜色定义 */
+        .color-mild { color: #1989fa; }
+        .bg-mild { background: #1989fa; }
+        .box-mild { background: #edf4ff; border: 1px solid #d7e8ff; }
+
+        .color-moderate { color: #ff976a; }
+        .bg-moderate { background: #ff976a; }
+        .box-moderate { background: #fffbe8; border: 1px solid #ffe8cc; }
+
+        .color-severe { color: #ee0a24; }
+        .bg-severe { background: #ee0a24; }
+        .box-severe { background: #fef0f0; border: 1px solid #fbc4c4; }
+
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <div class="app-wrapper">
+            
+            <div v-if="!isValidLink" class="error-page">
+                <div class="error-icon">⚠️</div>
+                <div style="font-size: 20px; font-weight: bold; margin-bottom: 10px;">链接已失效或不合法</div>
+                <div style="font-size: 14px; color: #999;">该专属测评链接可能已经过期<br>请重新联系小红书客服获取最新链接</div>
+            </div>
+
+            <div v-else-if="!isFinished" class="test-container">
+                <van-nav-bar title="双相情感障碍自评量表" :border="false"></van-nav-bar>
+                
+                <div class="test-desc">
+                    💡 提示：本量表根据 DSM-IV (美国精神疾病诊断标准) 制定。请根据您<b>最近大部分日常生活时间里</b>的感受和行为进行选择。
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; margin-bottom: 12px;">
+                    <span style="font-size: 14px; color: #969799; font-weight: bold;">答题进度</span>
+                    <span style="font-size: 14px; color: #1989fa; font-weight: bold;">{{ currentIndex + 1 }} / 12</span>
+                </div>
+                <van-progress :percentage="progress" stroke-width="8" color="linear-gradient(to right, #4facfe, #00f2fe)" style="margin-bottom: 30px;"></van-progress>
+
+                <div class="question-title">{{ currentQuestion.id }}. {{ currentQuestion.text }}</div>
+                <div class="options-container">
+                    <div class="option-item" v-for="(opt, idx) in options" :key="idx" :class="{ 'active': currentAnswer === opt.value }" @click="selectOption(opt.value)">
+                        <span class="option-text">{{ opt.label }}</span>
+                        <div class="radio-circle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-else>
+                <div class="report-header-bg">
+                    <div class="report-header-icon">🧬</div>
+                    <div class="report-header-title">双相情感倾向 深度解析报告</div>
+                    <div class="report-header-time">测评完成时间: {{ finishTime }}</div>
+                </div>
+
+                <div class="report-card" style="margin-top: -30px;">
+                    <div class="card-title">诊断倾向评估</div>
+                    
+                    <div class="total-score-box">
+                        <div class="total-label">临床量表总得分</div>
+                        <div class="total-num" :class="overallStatus.colorClass">{{ totalScore }}</div>
+                        <div class="total-max">满分 60 分</div>
+                    </div>
+
+                    <div class="level-box">
+                        <div class="level-label">评估结果判定为</div>
+                        <div class="level-tag" :class="overallStatus.bgClass" style="box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                            【 {{ overallStatus.levelText }} 】
+                        </div>
+                        <div class="advice-subtitle" :class="overallStatus.colorClass">{{ overallStatus.actionText }}</div>
+                    </div>
+
+                    <div class="advice-box" :class="overallStatus.boxClass">
+                        {{ overallStatus.adviceDesc }}
+                    </div>
+                    
+                    <div class="info-box">
+                        <div class="info-title">⚠️ 免责及医疗声明</div>
+                        <div class="info-text">
+                            本测试结果基于算法自动生成，仅供临床辅助评估及自我觉察参考。双相情感障碍的确诊需结合详尽的精神科病史采集与观察，<b>不可仅凭单一量表直接确诊。</b>如您感到严重困扰，请务必前往正规三甲医院精神科或心身医学科就诊。
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 0 15px;">
+                    <van-button type="primary" block round plain style="height: 48px; font-size: 16px; border-color: #4facfe; color: #4facfe;" @click="refresh">重新测试</van-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.staticfile.net/vue/3.3.4/vue.global.min.js"></script>
+    <script src="https://cdn.staticfile.net/vant/4.8.0/vant.min.js"></script>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const isValidLink = ref(false); 
+                // 【注意】这里使用了新的加密暗号，防止和 SCL90 串号
+                const SECRET_SALT = "bipolar_pro"; 
+                const finishTime = ref("");
+
+                onMounted(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    const key = params.get('key');
+                    if (key) {
+                        try {
+                            const decoded = atob(key); 
+                            const parts = decoded.split('||');
+                            if (parts.length === 2 && parts[1] === SECRET_SALT) {
+                                const expireTime = parseInt(parts[0]);
+                                if (Date.now() < expireTime) {
+                                    isValidLink.value = true; 
+                                }
+                            }
+                        } catch (e) {
+                            console.log("密钥解析失败");
+                        }
+                    }
+                });
+
+                const currentIndex = ref(0);
+                const userAnswers = ref([]);
+                const isFinished = ref(false);
+                const currentAnswer = ref(null);
+
+                // 12道双相量表题库
+                const questions = [
+                    { id: 1, text: "有时我的话语比平常多得多，或者说话速度比平常快得多。" },
+                    { id: 2, text: "我有时会比平常积极主动得多，或者做比平常多很多的事情。" },
+                    { id: 3, text: "我会陷入激动易怒的心情。" },
+                    { id: 4, text: "我有时会同时觉得激动和郁闷。" },
+                    { id: 5, text: "我有时会对性比平常表现出大得多的兴趣。" },
+                    { id: 6, text: "我的自我感觉在过分自卑和过分自信之间变化。" },
+                    { id: 7, text: "我的工作的质量和数量有时会发生非常大的变化。" },
+                    { id: 8, text: "我有时会毫无原由的激动和对他人怀有敌意。" },
+                    { id: 9, text: "我有时头脑很不好使，而有时思维又灵活到有很多创新的见解。" },
+                    { id: 10, text: "我有时对人际交往表现出很大的兴趣，而有时只愿意一个人独处。" },
+                    { id: 11, text: "我的观念在极度乐观和极度悲观之间变化。" },
+                    { id: 12, text: "我有时会抑制不住的热泪盈眶，有时又会过度的爱开玩笑。" }
+                ];
+                
+                // 0-5 分制
+                const options = [
+                    { label: "完全不符或几乎不符", value: 0 }, 
+                    { label: "稍微符合", value: 1 }, 
+                    { label: "有点符合", value: 2 },
+                    { label: "比较符合", value: 3 }, 
+                    { label: "较多符合", value: 4 },
+                    { label: "非常符合或完全符合", value: 5 }
+                ];
+
+                const progress = computed(() => Math.floor((currentIndex.value / questions.length) * 100));
+                const currentQuestion = computed(() => questions[currentIndex.value]);
+
+                const selectOption = (val) => {
+                    if (currentAnswer.value !== null) return;
+                    currentAnswer.value = val;
+                    userAnswers.value.push(val);
+                    setTimeout(() => {
+                        if (currentIndex.value < questions.length - 1) {
+                            currentIndex.value++;
+                            currentAnswer.value = null;
+                        } else {
+                            // 答题结束，记录时间
+                            const now = new Date();
+                            finishTime.value = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                            isFinished.value = true;
+                        }
+                    }, 250); 
+                };
+
+                const totalScore = computed(() => userAnswers.value.reduce((sum, score) => sum + score, 0));
+
+                // 核心诊断逻辑 (0-15, 16-24, 25-60)
+                const overallStatus = computed(() => {
+                    const score = totalScore.value;
+                    if (score >= 25) {
+                        return { 
+                            levelText: '双相情感障碍倾向', 
+                            actionText: '强烈建议临床诊断', 
+                            colorClass: 'color-severe', 
+                            bgClass: 'bg-severe', 
+                            boxClass: 'box-severe', 
+                            adviceDesc: '经过专业量表检测，您的症状高度倾向于【双相情感障碍】。您近期可能正在经历显著的情绪两极化波动（在狂躁与抑郁之间切换）。这并非简单的“心情不好”，为了您和家人的幸福，建议您带着此结果，尽快联系专业精神科医生进行临床确诊与干预。' 
+                        };
+                    } else if (score >= 16) {
+                        return { 
+                            levelText: '重抑郁轻躁狂倾向', 
+                            actionText: '需重点关注情绪波动', 
+                            colorClass: 'color-moderate', 
+                            bgClass: 'bg-moderate', 
+                            boxClass: 'box-moderate', 
+                            adviceDesc: '经过专业量表检测，您的症状倾向于【重抑郁轻躁狂】。您可能正承受着较重的情绪低落，且伴随着偶发的情绪激昂或易怒。这说明您的情绪系统负荷过高，建议您联系专业机构或心理咨询师，进行更详尽的排查。' 
+                        };
+                    } else {
+                        return { 
+                            levelText: '单相抑郁倾向', 
+                            actionText: '建议进行抑郁专项筛查', 
+                            colorClass: 'color-mild', 
+                            bgClass: 'bg-mild', 
+                            boxClass: 'box-mild', 
+                            adviceDesc: '经过专业量表检测，您目前未表现出明显的躁狂症状，整体更倾向于纯粹的【单相抑郁】。您的情绪可能处于持续低落、缺乏动力的状态。建议您关注自身压力，必要时可进行专门的抑郁量表（如SDS）测试或寻求心理疏导。' 
+                        };
+                    }
+                });
+
+                const refresh = () => {
+                    currentIndex.value = 0;
+                    userAnswers.value = [];
+                    currentAnswer.value = null;
+                    isFinished.value = false;
+                };
+
+                return { 
+                    isValidLink, currentIndex, questions, options, progress, currentQuestion, currentAnswer, selectOption, 
+                    isFinished, finishTime, totalScore, overallStatus, refresh 
+                };
+            }
+        }).use(vant).mount('#app');
+    </script>
+</body>
+</html>
